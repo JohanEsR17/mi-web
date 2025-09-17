@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard: Correlación Inflación y PBI en Perú (1950-2024)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #f8fafc; /* slate-50 */
+            --bg-secondary: #ffffff;
+            --text-primary: #0f172a; /* slate-900 */
+            --text-secondary: #475569; /* slate-600 */
+            --border-color: #e2e8f0; /* slate-200 */
+            --accent-color: #4f46e5; /* indigo-600 */
+            --accent-color-light: #e0e7ff; /* indigo-100 */
+            --color-negative: #dc2626; /* red-600 */
+            --color-positive: #16a34a; /* green-600 */
+            --color-neutral: #64748b; /* slate-500 */
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 350px;
+        }
+        #correlationBarChart { cursor: pointer; }
+        .transition-all-fast { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .metric-card {
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            text-align: center;
+        }
+        #decade-detail-view {
+            transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        #decade-detail-view.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        
+        <header class="text-center mb-12">
+            <h1 class="text-4xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">Inflación vs. Crecimiento del PBI en Perú</h1>
+            <p class="mt-4 text-lg text-slate-600">Un análisis de correlación por década (1950-2024).</p>
+        </header>
+
+        <main class="space-y-8">
+            
+            <div class="bg-white p-6 rounded-xl shadow-lg border border-slate-200">
+                <h2 class="text-xl font-bold mb-1">Correlación por Década</h2>
+                <p class="text-slate-600 mb-4">Haz clic en una barra para explorar la década en detalle.</p>
+                <div class="chart-container !h-[400px]">
+                    <canvas id="correlationBarChart"></canvas>
+                </div>
+            </div>
+
+            <div id="decade-detail-view" class="">
+                <div class="bg-white p-6 rounded-xl shadow-lg border border-slate-200 space-y-8">
+                    
+                    <header>
+                        <h2 id="decade-title" class="text-3xl font-bold text-slate-900"></h2>
+                        <p id="decade-analysis" class="mt-2 text-slate-600 text-justify max-w-4xl"></p>
+                    </header>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="metric-card">
+                            <span class="text-sm font-medium text-slate-500 block">Correlación (r)</span>
+                            <p id="decade-correlation" class="text-4xl font-bold"></p>
+                        </div>
+                        <div class="metric-card">
+                            <span class="text-sm font-medium text-slate-500 block">Inflación Promedio Anual</span>
+                            <p id="mean-inflation" class="text-4xl font-bold text-red-600"></p>
+                        </div>
+                        <div class="metric-card">
+                            <span class="text-sm font-medium text-slate-500 block">Crecimiento PBI Promedio</span>
+                            <p id="mean-pbi" class="text-4xl font-bold text-blue-700"></p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-6 border-t border-slate-200">
+                        <div class="space-y-2">
+                            <h3 class="font-semibold text-slate-800">Dispersión Anual (Inflación vs Crecimiento PBI)</h3>
+                             <p class="text-sm text-slate-500">Cada punto representa un año. Eje X (Inflación), Eje Y (PBI).</p>
+                            <div class="chart-container mt-2 !h-[400px]">
+                                <canvas id="decadeScatterChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="space-y-8">
+                            <div>
+                               <h3 class="font-semibold text-slate-800">Línea de Tiempo: Inflación Anual (%)</h3>
+                               <div class="chart-container mt-2 !h-[180px]">
+                                   <canvas id="inflationTimelineChart"></canvas>
+                               </div>
+                           </div>
+                           <div>
+                               <h3 class="font-semibold text-slate-800">Línea de Tiempo: Crecimiento PBI Anual (%)</h3>
+                               <div class="chart-container mt-2 !h-[180px]">
+                                   <canvas id="pbiTimelineChart"></canvas>
+                               </div>
+                           </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+        
+        <footer class="mt-12 bg-white p-8 rounded-xl shadow-lg border border-slate-200">
+            <h2 class="text-2xl font-bold text-slate-900">Conclusión General</h2>
+            <p class="mt-4 text-slate-600 text-justify">El análisis histórico revela una relación predominantemente negativa entre la inflación y el crecimiento del PBI en Perú. La fortaleza de esta correlación inversa se acentúa en periodos de inestabilidad macroeconómica (ej. 1980s). Sin embargo, en las décadas más recientes (2010s, 2020s), la relación se vuelve más compleja. Eventos como la pandemia de COVID-19 introducen una volatilidad extrema que debilita la correlación histórica, mostrando que en periodos de shocks externos masivos, la dinámica económica puede desviarse de sus patrones históricos y la relación entre inflación y crecimiento se ve opacada por factores de mayor magnitud.</p>
+             <div class="mt-6 border-t border-slate-200 pt-4 text-sm text-slate-500">
+                <p><span class="font-semibold">Fuente de Datos:</span> Banco Central de Reservas (BCRP).</p>
+                <p><span class="font-semibold">Metodología:</span> Coeficiente de correlación de Pearson (r) calculado por década para las series anuales de Inflación (IPC) y Crecimiento del PBI real.</p>
+            </div>
+        </footer>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const analysisData = {
+                '1950': {
+                    correlation: 0.062,
+                    text: 'La correlación es prácticamente nula, sugiriendo que otros factores distintos a la inflación tuvieron mayor incidencia en el crecimiento económico durante este período de relativa estabilidad.',
+                    points: [{"x": 10.29, "y": 8.54}, {"x": 9.95, "y": 9.26}, {"x": 6.92, "y": 5.9}, {"x": 9.09, "y": 5.78}, {"x": 5.4, "y": 5.34}, {"x": 4.7, "y": 5.87}, {"x": 5.47, "y": 4.7}, {"x": 7.4, "y": 6.65}, {"x": 7.94, "y": -1.07}, {"x": 12.7, "y": 3.16}]
+                },
+                '1960': {
+                    correlation: -0.55,
+                    text: 'Se observa una correlación negativa moderada. Durante esta década, el aumento de la inflación comenzó a mostrar una relación inversa con el crecimiento económico, marcando el inicio de un período de mayor inestabilidad.',
+                    points: [{"x": 8.63, "y": 9.89}, {"x": 6.02, "y": 7.35}, {"x": 6.62, "y": 10.04}, {"x": 6.02, "y": 4.33}, {"x": 9.85, "y": 6.55}, {"x": 16.36, "y": 5.62}, {"x": 8.89, "y": 8.24}, {"x": 11.46, "y": 3.85}, {"x": 19.12, "y": 0.15}, {"x": 6.23, "y": 3.51}]
+                },
+                '1970': {
+                    correlation: -0.52,
+                    text: 'La correlación negativa moderada persiste. Esta década estuvo marcada por reformas estructurales y un entorno económico volátil, donde los episodios de mayor inflación tendieron a coincidir con un menor crecimiento.',
+                    points: [{"x": 5.02, "y": 3.37}, {"x": 6.81, "y": 4.59}, {"x": 7.19, "y": 3.48}, {"x": 9.51, "y": 6.28}, {"x": 16.88, "y": 9.39}, {"x": 23.63, "y": 4.3}, {"x": 33.49, "y": 1.45}, {"x": 38.04, "y": 0.35}, {"x": 57.85, "y": -2.64}, {"x": 67.7, "y": 4.13}]
+                },
+                '1980': {
+                    correlation: -0.622,
+                    text: 'Se registra la correlación negativa más fuerte del período. La década de 1980, marcada por la crisis de la deuda y la hiperinflación, muestra claramente cómo la escalada de precios devastó la actividad económica.',
+                    points: [{"x": 59.16, "y": 5.91}, {"x": 75.42, "y": 5.55}, {"x": 64.46, "y": -0.22}, {"x": 111.15, "y": -10.41}, {"x": 110.21, "y": 3.61}, {"x": 163.4, "y": 2.06}, {"x": 77.92, "y": 9.43}, {"x": 85.85, "y": 9.73}, {"x": 666.96, "y": -9.44}, {"x": 3398.27, "y": -12.31}]
+                },
+                '1990': {
+                    correlation: -0.598,
+                    text: 'La fuerte correlación negativa continúa a principios de la década. Tras las reformas de estabilización, el control de la hiperinflación permitió sentar las bases para la recuperación del crecimiento económico.',
+                    points: [{"x": 7481.69, "y": -4.98}, {"x": 409.53, "y": 2.22}, {"x": 73.53, "y": -0.54}, {"x": 48.58, "y": 5.24}, {"x": 23.73, "y": 12.31}, {"x": 11.13, "y": 7.41}, {"x": 11.55, "y": 2.8}, {"x": 8.55, "y": 6.48}, {"x": 7.25, "y": -0.39}, {"x": 3.47, "y": 1.49}]
+                },
+                '2000': {
+                    correlation: -0.575,
+                    text: 'La década se caracteriza por un crecimiento económico robusto y una inflación bajo control. Se observa una correlación negativa moderada, donde los años de mayor crecimiento tienden a presentar una inflación ligeramente menor, en un contexto de estabilidad macroeconómica post-reformas.',
+                    points: [{"x": 3.76, "y": 2.69}, {"x": 1.98, "y": 0.62}, {"x": 0.19, "y": 5.45}, {"x": 2.26, "y": 4.16}, {"x": 3.66, "y": 4.96}, {"x": 1.62, "y": 6.29}, {"x": 2.0, "y": 7.53}, {"x": 1.78, "y": 8.52}, {"x": 5.79, "y": 9.13}, {"x": 2.94, "y": 1.1}]
+                },
+                '2010': {
+                    correlation: -0.463,
+                    text: 'La correlación negativa se mantiene, aunque más débil. La década muestra una desaceleración del crecimiento post-boom de los commodities. La política monetaria mantuvo la inflación anclada, pero el menor crecimiento económico no siempre se alineó con menores tasas de inflación.',
+                    points: [{"x": 1.53, "y": 8.33}, {"x": 3.37, "y": 6.33}, {"x": 3.66, "y": 6.14}, {"x": 2.81, "y": 5.85}, {"x": 3.25, "y": 2.38}, {"x": 3.55, "y": 3.25}, {"x": 3.59, "y": 3.95}, {"x": 2.8, "y": 2.52}, {"x": 1.32, "y": 3.97}, {"x": 2.14, "y": 2.24}]
+                },
+                '2020': {
+                    correlation: 0.207,
+                    text: 'La relación histórica se invierte a una correlación positiva débil. La década está dominada por el shock de la pandemia: una caída masiva del PBI con baja inflación en 2020, seguida de una recuperación abrupta con un pico inflacionario en 2021-2022. La volatilidad extrema opaca la relación tradicional entre las variables.',
+                    points: [{"x": 1.83, "y": -10.94}, {"x": 3.98, "y": 13.37}, {"x": 7.88, "y": 2.81}, {"x": 6.26, "y": -0.4}, {"x": 2.35, "y": 3.3}]
+                }
+            };
+
+            const decades = Object.keys(analysisData);
+            let currentDecade = '2020';
+
+            const detailView = document.getElementById('decade-detail-view');
+            const decadeTitleEl = document.getElementById('decade-title');
+            const decadeCorrelationEl = document.getElementById('decade-correlation');
+            const decadeAnalysisEl = document.getElementById('decade-analysis');
+            const meanInflationEl = document.getElementById('mean-inflation');
+            const meanPbiEl = document.getElementById('mean-pbi');
+            
+            Chart.defaults.font.family = "'Inter', sans-serif";
+            Chart.defaults.color = '#334155'; // slate-700
+            
+            const getBarColors = () => decades.map(decade => (decade === currentDecade) ? 'var(--accent-color)' : '#94a3b8' /* slate-400 */);
+
+            // --- Gráfico de Barras Principal ---
+            const barCtx = document.getElementById('correlationBarChart').getContext('2d');
+            const correlationBarChart = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: decades.map(d => `${d}s`),
+                    datasets: [{
+                        label: 'Coeficiente de Correlación',
+                        data: decades.map(d => analysisData[d].correlation),
+                        backgroundColor: getBarColors(),
+                        borderColor: getBarColors(),
+                        borderWidth: 1,
+                        borderRadius: 4,
+                        hoverBackgroundColor: 'var(--accent-color)'
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+                    scales: { 
+                        y: { grid: { display: false } },
+                        x: { title: { display: true, text: 'Coeficiente de Pearson (r)', font: { weight: '500' } } } 
+                    },
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: { 
+                            backgroundColor: '#0f172a', titleFont: { weight: 'bold' },
+                            callbacks: { label: context => `Correlación (r): ${context.raw.toFixed(3)}` }
+                        } 
+                    },
+                    onClick: (event, elements) => {
+                        if (elements.length > 0) {
+                            const newDecade = decades[elements[0].index];
+                            if (newDecade !== currentDecade) {
+                                currentDecade = newDecade;
+                                updateDashboard();
+                            }
+                        }
+                    }
+                }
+            });
+
+            // --- Gráficos de Detalle (inicialización vacía) ---
+            const createChart = (ctx, type, options) => new Chart(ctx, { type, data: { labels: [], datasets: [] }, options });
+            
+            const scatterOptions = { responsive: true, maintainAspectRatio: false, scales: { x: { type: 'linear', position: 'bottom', title: { display: true, text: 'Inflación Anual (%)' } }, y: { title: { display: true, text: 'Crecimiento PBI Anual (%)' } } }, plugins: { legend: { display: false }, tooltip: { backgroundColor: '#0f172a', titleFont: { weight: 'bold' }, callbacks: { label: function(context) { const point = context.dataset.data[context.dataIndex]; const year = parseInt(currentDecade) + context.dataIndex; return `Año ${year}: Inflación ${point.x.toFixed(2)}%, PBI ${point.y.toFixed(2)}%`; } } } } };
+            const lineOptions = (yLabel, color, isLog = false) => ({ responsive: true, maintainAspectRatio: false, scales: { y: { type: isLog ? 'logarithmic' : 'linear', title: { display: true, text: yLabel } }, x: { ticks: { maxRotation: 0, minRotation: 0, autoSkip: true, maxTicksLimit: 10 } } }, plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false, backgroundColor: '#0f172a', titleFont: { weight: 'bold' } } } });
+
+            let decadeScatterChart = createChart(document.getElementById('decadeScatterChart').getContext('2d'), 'scatter', scatterOptions);
+            let inflationTimelineChart = createChart(document.getElementById('inflationTimelineChart').getContext('2d'), 'line', lineOptions('Inflación (%)', 'var(--color-negative)'));
+            let pbiTimelineChart = createChart(document.getElementById('pbiTimelineChart').getContext('2d'), 'line', lineOptions('Crecimiento PBI (%)', '#2563eb'));
+
+            // --- Función Principal de Actualización ---
+            function updateDashboard() {
+                const data = analysisData[currentDecade];
+                const points = data.points;
+                
+                detailView.classList.remove('visible');
+                
+                setTimeout(() => {
+                    decadeTitleEl.textContent = `Análisis Detallado: Década de ${currentDecade}`;
+                    decadeAnalysisEl.textContent = data.text;
+                    decadeCorrelationEl.textContent = data.correlation.toFixed(3);
+                    
+                    const correlationColor = data.correlation > 0.1 ? 'var(--color-positive)' : data.correlation < -0.1 ? 'var(--color-negative)' : 'var(--color-neutral)';
+                    decadeCorrelationEl.style.color = correlationColor;
+
+                    const inflationValues = points.map(p => p.x);
+                    const pbiValues = points.map(p => p.y);
+                    const meanInflation = inflationValues.reduce((a, b) => a + b, 0) / inflationValues.length;
+                    const meanPBI = pbiValues.reduce((a, b) => a + b, 0) / pbiValues.length;
+                    meanInflationEl.textContent = `${meanInflation.toFixed(1)}%`;
+                    meanPbiEl.textContent = `${meanPBI.toFixed(1)}%`;
+                    
+                    correlationBarChart.data.datasets[0].backgroundColor = getBarColors();
+                    correlationBarChart.data.datasets[0].borderColor = getBarColors();
+                    correlationBarChart.update('none'); 
+
+                    decadeScatterChart.destroy();
+                    inflationTimelineChart.destroy();
+                    pbiTimelineChart.destroy();
+                    
+                    const useLogScale = Math.max(...inflationValues) > 1000;
+                    
+                    scatterOptions.scales.x.type = useLogScale ? 'logarithmic' : 'linear';
+                    decadeScatterChart = createChart(document.getElementById('decadeScatterChart').getContext('2d'), 'scatter', scatterOptions);
+                    decadeScatterChart.data = { datasets: [{ label: 'Datos Anuales', data: points, backgroundColor: '#2563eb' /* blue-700 */, pointRadius: 5, pointHoverRadius: 8 }] };
+                    decadeScatterChart.update();
+
+                    inflationTimelineChart = createChart(document.getElementById('inflationTimelineChart').getContext('2d'), 'line', lineOptions('Inflación (%)', 'var(--color-negative)', useLogScale));
+                    inflationTimelineChart.data = { labels: points.map((_, i) => parseInt(currentDecade) + i), datasets: [{ label: 'Inflación', data: inflationValues, borderColor: 'var(--color-negative)', backgroundColor: 'rgba(220, 38, 38, 0.1)', fill: true, tension: 0.2, pointRadius: 3, pointHoverRadius: 6 }] };
+                    inflationTimelineChart.update();
+                    
+                    pbiTimelineChart = createChart(document.getElementById('pbiTimelineChart').getContext('2d'), 'line', lineOptions('Crecimiento PBI (%)', '#2563eb'));
+                    pbiTimelineChart.data = { labels: points.map((_, i) => parseInt(currentDecade) + i), datasets: [{ label: 'Crecimiento PBI', data: pbiValues, borderColor: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.1)', fill: true, tension: 0.2, pointRadius: 3, pointHoverRadius: 6 }] };
+                    pbiTimelineChart.update();
+
+                    detailView.classList.add('visible');
+                    detailView.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+                }, 150); 
+            }
+            
+            updateDashboard();
+        });
+    </script>
+</body>
+</html>

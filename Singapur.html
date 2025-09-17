@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Interactivo: Singapur vs. Perú - Modelos de Desarrollo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* --- Paleta de Colores Pastel y Estilo Base --- */
+        :root {
+            --bg-light: #F8FAFC;      /* Slate 50 */
+            --bg-card: #FFFFFF;       /* White */
+            --border-color: #E2E8F0;  /* Slate 200 */
+            --text-primary: #1E293B;    /* Slate 800 */
+            --text-secondary: #64748B;/* Slate 500 */
+            --accent-primary: #38BDF8;  /* Sky 400 */
+            --accent-secondary: #FB7185; /* Rose 400 */
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        /* --- Estilo de Tarjetas Minimalista --- */
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+        }
+
+        /* --- Barra de Navegación con "Glider" --- */
+        .nav-container {
+            position: relative;
+            background-color: #F1F5F9; /* Slate 100 */
+            border: 1px solid var(--border-color);
+        }
+        #nav-glider {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background-color: var(--accent-primary);
+            border-radius: 9999px;
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+            z-index: 0;
+        }
+        .timeline-btn {
+            position: relative;
+            z-index: 1;
+            transition: color 0.3s ease;
+            color: var(--text-secondary);
+        }
+        .timeline-btn.active {
+            color: white;
+            font-weight: 600;
+        }
+
+        /* --- Cajas de KPI --- */
+        .kpi-box {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+        }
+        .kpi-box:hover {
+            background-color: #F8FAFC; /* Slate 50 */
+            border-color: var(--accent-primary);
+        }
+        .kpi-box.active-kpi {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.3);
+            background-color: #E0F2FE; /* Sky 100 */
+        }
+
+        /* --- Acordeón para Políticas --- */
+        .accordion-item {
+            border-bottom: 1px solid var(--border-color);
+        }
+        .accordion-header {
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background-color: #F8FAFC; /* Slate 50 */
+            transition: background-color 0.2s;
+        }
+        .accordion-header:hover {
+            background-color: #F1F5F9; /* Slate 100 */
+        }
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease-out, padding 0.4s ease-out;
+            padding: 0 0.75rem;
+            background-color: white;
+        }
+        .accordion-content.open {
+            max-height: 200px; /* Ajusta según el contenido máximo esperado */
+            padding: 0.75rem;
+        }
+        .accordion-icon {
+            transition: transform 0.4s ease;
+        }
+        .accordion-header.active .accordion-icon {
+            transform: rotate(180deg);
+        }
+
+        /* --- Animaciones de Entrada --- */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in-content {
+            animation: fadeIn 0.6s ease-out forwards;
+        }
+        
+        /* --- Pantalla de Bienvenida --- */
+        .splash-modal {
+            transition: opacity 0.5s ease-out;
+        }
+        .splash-content {
+            transition: transform 0.5s ease-out, opacity 0.5s ease-out;
+        }
+
+    </style>
+</head>
+<body class="antialiased">
+    <!-- Pantalla de Bienvenida (Splash Screen) -->
+    <div id="splash-screen" class="splash-modal fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4 opacity-0">
+        <div class="splash-content card p-8 max-w-2xl w-full mx-auto text-center opacity-0 transform scale-95">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/6/6e/Universidad_Nacional_de_Trujillo_-_Per%C3%BA_vector_logo.png" alt="Logo UNT" class="w-30 h-24 mx-auto mb-4">
+            <h2 class="text-2xl font-bold text-slate-700">Universidad Nacional de Trujillo</h2>
+            <hr class="my-4 border-slate-200">
+            <h1 class="text-2xl md:text-3xl font-bold text-sky-600 mb-4">ANÁLISIS DE POLÍTICAS ECONÓMICAS DE SINGAPUR DURANTE 1970 - 2024</h1>
+            <div class="mt-6">
+                <h3 class="text-xl font-semibold text-slate-800">Integrantes: (GRUPO 10)</h3>
+                <div class="mt-3 text-slate-600 space-y-1">
+                    <p>Collazos Sanchez, Perla Karelyss</p>
+                    <p>Escobar Riveros, Johan Antoni</p>
+                    <p>Hernández Arnao, Jhadyra Niccole</p>
+                    <p>Riveros Reyes, Yareydi</p>
+                    <p>Valera Caipo, Isis Melissa</p>
+                </div>
+            </div>
+            <button id="close-splash" class="mt-8 text-white bg-sky-500 hover:bg-sky-600 focus:ring-4 focus:ring-sky-300 font-medium rounded-lg text-lg px-8 py-3 transition-colors duration-200">
+                Ingresar al Panel
+            </button>
+        </div>
+    </div>
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-10">
+            <h1 class="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-sky-500 to-rose-500 mb-2">Modelos Económicos en Perspectiva</h1>
+            <p class="text-lg text-slate-600">Un Análisis Comparativo de Singapur y Perú (1970-2024)</p>
+        </header>
+
+        <section id="introduction" class="mb-12 max-w-4xl mx-auto">
+             <div class="card p-8">
+                <h2 class="text-2xl font-bold text-center mb-4 text-sky-600">Introducción</h2>
+                <p class="text-slate-700 leading-relaxed text-justify">
+                    Este informe presenta un análisis comparativo de las políticas económicas de Singapur y Perú entre 1970 y 2024. El contenido se estructura en un recorrido cronológico, dividido por décadas, para examinar cómo las estrategias de cada país impactaron sus indicadores clave, tales como el crecimiento del PIB, la inflación y la inversión extranjera. A través de este panel interactivo, se contrastará el modelo de desarrollo planificado de Singapur —un referente global por su notable transformación— con la trayectoria económica de Perú, evaluando los factores, logros y limitaciones que definieron los resultados de ambas naciones.
+                </p>
+            </div>
+        </section>
+
+        <nav class="flex justify-center mb-12 sticky top-4 z-20">
+            <div class="nav-container flex justify-center space-x-2 md:space-x-4 p-2 rounded-full">
+                <div id="nav-glider"></div>
+                <button class="timeline-btn active text-sm md:text-base font-medium py-2 px-5 rounded-full" data-decade="70s">Década de los 70</button>
+                <button class="timeline-btn text-sm md:text-base font-medium py-2 px-5 rounded-full" data-decade="80s-90s">80s y 90s</button>
+                <button class="timeline-btn text-sm md:text-base font-medium py-2 px-5 rounded-full" data-decade="2000s">2000-2024</button>
+            </div>
+        </nav>
+
+        <main class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Columna de Singapur -->
+            <div id="singapore-column" class="card p-6">
+                <h2 class="text-3xl font-bold mb-4 flex items-center gap-3 text-sky-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" class="w-8 h-8"><path fill="#D52B1E" d="M0 27a4 4 0 0 0 4 4h28a4 4 0 0 0 4-4v-9H0v9z"/><path fill="#EEE" d="M32 9H4a4 4 0 0 0-4 4v5h36v-5a4 4 0 0 0-4-4z"/><path fill="#EEE" d="M12.936 9.489a4.5 4.5 0 1 0 0 8.022A5.5 5.5 0 1 1 12.936 9.489z"/><path fill="#EEE" d="m11.196 13.064 1.342-.924-1.342-.924.512-1.442 1.342.924.513-1.442.829 1.2.828-1.2.513 1.442 1.342-.924.512 1.442-1.342.924 1.342.924-.512 1.442-1.342-.924-.513 1.442-.829-1.2-.828 1.2-.513-1.442-1.342.924z"/></svg>
+                    El Modelo de Singapur
+                </h2>
+                <div id="content-singapore">
+                    <!-- El contenido se inyectará dinámicamente aquí -->
+                </div>
+            </div>
+
+            <!-- Columna de Perú -->
+            <div id="peru-column" class="card p-6">
+                <h2 class="text-3xl font-bold mb-4 flex items-center gap-3 text-rose-600">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/c/cf/Flag_of_Peru.svg" alt="Bandera de Perú" class="w-9 h-6 rounded-sm object-cover border border-slate-200">
+                    El Modelo de Perú
+                </h2>
+                <div id="content-peru">
+                    <!-- El contenido se inyectará dinámicamente aquí -->
+                </div>
+            </div>
+        </main>
+
+        <section id="conclusion" class="mt-16">
+            <h2 class="text-3xl md:text-4xl font-bold text-center bg-clip-text text-transparent bg-gradient-to-r from-sky-500 to-rose-500 mb-8">Comparación y Lecciones del Desarrollo</h2>
+            <p class="text-center max-w-4xl mx-auto mb-10 text-slate-600 leading-relaxed">
+                El análisis comparativo revela lecciones fundamentales sobre los factores que impulsan el desarrollo. Las diferencias en visión estratégica, el rol del Estado y la estrategia de crecimiento explican en gran medida los divergentes resultados obtenidos.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                 <div class="card p-6 text-center">
+                    <div class="mx-auto w-16 h-16 flex items-center justify-center rounded-lg bg-sky-100 mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-sky-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Visión a Largo Plazo</h3>
+                    <p class="text-slate-600"><strong class="text-slate-800">Singapur:</strong> Planificación estratégica y consistente, enfocada en la adaptación y el ascenso en la cadena de valor global.</p>
+                    <hr class="my-3 border-slate-200">
+                    <p class="text-slate-600"><strong class="text-slate-800">Perú:</strong> Políticas de corto plazo, con cambios abruptos de modelo debido a la inestabilidad política.</p>
+                </div>
+                <div class="card p-6 text-center">
+                    <div class="mx-auto w-16 h-16 flex items-center justify-center rounded-lg bg-sky-100 mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-sky-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Rol del Estado</h3>
+                    <p class="text-slate-600"><strong class="text-slate-800">Singapur:</strong> Estado desarrollista, proactivo y facilitador de la inversión, creando un ecosistema favorable.</p>
+                    <hr class="my-3 border-slate-200">
+                    <p class="text-slate-600"><strong class="text-slate-800">Perú:</strong> Estado pendular, oscilando entre intervencionismo extremo y un liberalismo con débil capacidad institucional.</p>
+                </div>
+                <div class="card p-6 text-center">
+                    <div class="mx-auto w-16 h-16 flex items-center justify-center rounded-lg bg-sky-100 mb-4">
+                         <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-sky-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2h10a2 2 0 002-2v-1a2 2 0 012-2h1.945M7.737 11l-.262-1.571M16.263 11l.262-1.571M12 16v5m-3-5v5m6-5v5" /></svg>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Estrategia de Crecimiento</h3>
+                    <p class="text-slate-600"><strong class="text-slate-800">Singapur:</strong> Basada en la atracción de IED, diversificación y una fuerte inversión en capital humano.</p>
+                    <hr class="my-3 border-slate-200">
+                    <p class="text-slate-600"><strong class="text-slate-800">Perú:</strong> Dependiente de la exportación de materias primas, vulnerable a la volatilidad de precios.</p>
+                </div>
+            </div>
+             <div class="card p-6 mt-8">
+                <h3 class="text-2xl font-bold text-center mb-4 text-sky-600">Conclusión Final: Coherencia como Clave del Éxito</h3>
+                <p class="text-slate-700 text-justify">
+                    El análisis de datos demuestra que Singapur logró un desarrollo económico superior y más sostenible. Mientras su modelo, basado en planificación a largo plazo, inversión en capital humano y apertura, lo posicionó como una economía líder, Perú experimentó un crecimiento más inestable, dependiente de los recursos naturales y limitado por la debilidad institucional. La comparación resalta la importancia de la estabilidad, la coherencia de políticas y la inversión en capital humano como pilares del desarrollo sostenido.
+                </p>
+                 <div class="relative w-full h-96 max-h-[450px] mt-6">
+                        <canvas id="finalComparisonChart"></canvas>
+                 </div>
+            </div>
+        </section>
+
+        <footer class="mt-16 pt-8 border-t border-slate-200">
+            <div class="text-center">
+                <h4 class="text-xl font-semibold text-slate-700">Grupo 10</h4>
+                <p class="text-sm text-slate-400 mt-4">© 2024 - Panel de Análisis Económico</p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        const data = {
+            '70s': {
+                singapore: {
+                    decade: 'Década de los 70: Industrialización y Atracción de IED',
+                    context: 'Tras su separación de Malasia, Singapur enfrentaba un panorama crítico. El gobierno de Lee Kuan Yew apostó por una industrialización orientada a la exportación, asumiendo un rol activo como planificador para atraer capital, tecnología y conocimiento del exterior, generando un modelo de “capitalismo dirigido por el Estado”.',
+                    policies: [
+                        { title: 'Junta de Desarrollo Económico (EDB)', detail: 'Agencia clave que funcionaba como ventanilla única para atraer multinacionales y reducir la burocracia, permitiendo que empresas como National Semiconductor se instalaran y operaran en tiempo récord.' },
+                        { title: 'Marco Legal Pro-Inversión', detail: 'La Economic Expansion Incentives Act (1967) otorgó beneficios fiscales y el estatus de “empresa pionera”, con exenciones de impuestos de hasta 15 años para alinear los intereses de las multinacionales con los objetivos nacionales.' }
+                    ],
+                    kpis: [
+                        { title: 'Crecimiento PIB Promedio', value: '9.4%', chart: { type: 'bar', label: 'Crecimiento PIB (% anual)', labels: ['1970', '1971', '1972', '1973', '1974', '1975', '1976', '1977', '1978', '1979'], values: [13.94, 12.41, 13.32, 10.6, 6.12, 3.99, 7.44, 6.85, 7.78, 9.55]}},
+                        { title: 'IED Neta Promedio (% PIB)', value: '5.2%', chart: { type: 'line', label: 'IED Neta (% del PIB)', labels: ['1970', '1971', '1972', '1973', '1974', '1975', '1976', '1977', '1978', '1979'], values: [4.84, 5.12, 5.92, 9.55, 6.52, 5.18, 3.65, 4.4, 3.99, 8.99]}},
+                        { title: 'Comercio (% del PIB)', value: '>300%', chart: { type: 'bar', label: 'Comercio (% del PIB)', labels: ['1970', '1971', '1972', '1973', '1974', '1975', '1976', '1977', '1978', '1979'], values: [271.06, 259.3, 229.05, 245.73, 313.96, 283.57, 305.9, 326.98, 334.6, 375.01]}},
+                    ]
+                },
+                peru: {
+                    decade: 'Décadas 70-80: Crisis, Estancamiento e Hiperinflación',
+                    context: 'Estas dos décadas marcaron una profunda crisis. El gobierno militar de los 70 implementó un modelo estatista con nacionalizaciones y control de precios que estancó la producción. La década de los 80, con Alan García, profundizó la crisis con una política "heterodoxa" de gasto sin respaldo, moratoria de deuda y emisión monetaria que desató una hiperinflación devastadora y el aislamiento financiero del país.',
+                    policies: [
+                        { title: 'Nacionalización de Industrias Clave', detail: 'Se expropiaron y estatizaron sectores estratégicos como la minería, el petróleo (ITAPSA, 1970) y la banca, bajo la creencia de que el Estado gestionaría los recursos de manera más eficiente.' },
+                        { title: 'Reforma Agraria Radical', detail: 'Implementada en 1969, expropió grandes haciendas para crear cooperativas y Empresas de Propiedad Social (EPS), con el objetivo de acabar con el latifundio y aumentar la productividad.' },
+                        { title: 'Controles de Precios y Tipos de Cambio', detail: 'Se fijaron precios y el tipo de cambio para controlar la inflación y apoyar a la industria nacional a través de la sustitución de importaciones.' },
+                        { title: 'Expansión del Gasto Público y Empresas Estatales', detail: 'El Estado se expandió significativamente, creando numerosas empresas públicas en energía, transporte y telecomunicaciones, financiadas con deuda externa.' },
+                        { title: 'Creación del "Sistema Financiero Nacionalizado"', detail: 'Se nacionalizaron bancos e instituciones financieras para dirigir el crédito hacia sectores prioritarios del gobierno, como la agricultura y la industria.' },
+                        { title: 'Política Comercial Proteccionista', detail: 'Se implementaron altas barreras arancelarias y no arancelarias para proteger a la incipiente industria nacional de la competencia de las importaciones.' }
+                    ],
+                    kpis: [
+                        { title: 'Hiperinflación (1989)', value: '3398%', chart: { type: 'line', label: 'Tasa de Inflación Anual (%)', labels: ['1970', '1971', '1972', '1973', '1974', '1975', '1976', '1977', '1978', '1979', '1980', '1981', '1982', '1983', '1984', '1985', '1986', '1987', '1988', '1989'], values: [5.03, 6.79, 7.22, 9.49, 16.89, 23.62, 33.48, 38.05, 57.85, 66.69, 59.15, 75.43, 64.45, 111.15, 110.21, 163.4, 77.92, 85.82, 667.02, 3398.68]}},
+                        { title: 'Colapso del PIB (1989)', value: '-12%', chart: { type: 'bar', label: 'Crecimiento Anual del PIB (%)', labels: ['1970', '1971', '1972', '1973', '1974', '1975', '1976', '1977', '1978', '1979', '1980', '1981', '1982', '1983', '1984', '1985', '1986', '1987', '1988', '1989'], values: [3.37, 4.59, 3.48, 6.28, 9.39, 4.3, 1.45, 0.35, -2.64, 4.09, 5.94, 5.55, -0.22, -10.41, 3.61, 2.06, 9.43, 9.73, -9.44, -12.31]}},
+                        { title: 'Deuda Externa', value: '>468%', chart: { type: 'line', label: 'Deuda Externa', labels: ['1970', '1971', '1972', '1973', '1974', '1975', '1976', '1977', '1978', '1979', '1980', '1981', '1982', '1983', '1984', '1985', '1986', '1987', '1988', '1989'], values: [3299813044.7, 3409738680.8, 3585308809.5, 4023439916.7, 5380537914.0, 6263823225.1, 7725087025.3, 9323170353.5, 9864921758.9, 9416570413.8, 9534086343.5, 8742790842.6, 10871140798.2, 11510208723.9, 12325632944.2, 13049982870.9, 15046004898.8, 17636125496.0, 18380470896.9, 18770828679.8]}}
+                    ]
+                }
+            },
+            '80s-90s': {
+                singapore: {
+                    decade: 'Décadas 80-90: Transición a Industrias de Alto Valor',
+                    context: 'A fines de los 70, el modelo de mano de obra barata se agotó, culminando en la recesión de 1985. Esta crisis forzó una reestructuración hacia un mayor valor agregado. Durante los 90, con la globalización acelerada, Singapur se consolidó como un “Centro de Negocios Total”, integrando producción, finanzas e I+D, según lo delineado en su Plan Económico Estratégico de 1991.',
+                    policies: [
+                        { title: 'Comité Económico Nacional (1985)', detail: 'Creado tras la recesión, reunió al gobierno y sector privado para rediseñar la estrategia económica y restaurar la competitividad.' },
+                        { title: 'Política de Congelación Salarial (1986)', detail: 'Medida que detuvo por dos años los aumentos de sueldos para frenar los costes laborales y recuperar atractivo frente a la competencia regional.' },
+                        { title: 'Reforma del CPF (1986)', detail: 'Reducción de la tasa de contribución patronal del 25% al 10%, lo que disminuyó inmediatamente los costes empresariales y estimuló la contratación.' },
+                        { title: 'Plan Económico Estratégico (1991)', detail: 'Hoja de ruta que definió el objetivo de convertir a Singapur en un “Centro de Negocios Total”, integrando manufactura, finanzas, logística y servicios.' },
+                        { title: 'Política de Integración Global y Regional', detail: 'Estrategia de “doble motor” que atrajo IED e incentivó a empresas locales a invertir en el exterior, creando el Triángulo de Crecimiento con Malasia e Indonesia.' },
+                        { title: 'Programa de Infraestructura y Conectividad', detail: 'Expansión del Puerto de Singapur y modernización del Aeropuerto de Changi para consolidar al país como un hub logístico indispensable.' }
+                    ],
+                    kpis: [
+                        { title: 'Crecimiento PIB Promedio', value: '7.7%', chart: { type: 'bar', label: 'Crecimiento PIB (% anual)', labels: ['1980', '1981', '1982', '1983', '1984', '1985', '1986', '1987', '1988', '1989', '1990', '1991', '1992', '1993', '1994', '1995', '1996', '1997', '1998', '1999'], values: [10.11, 10.82, 7.1, 8.55, 8.79, -0.62, 1.34, 10.8, 11.26, 10.16, 9.82, 6.69, 6.64, 11.46, 11.1, 7.18, 7.47, 8.32, -2.19, 5.72]}},
+                        { title: 'Desempleo Bajo', value: '< 3%', chart: { type: 'line', label: 'Desempleo (% de la fuerza laboral)', labels: ['1990', '1991', '1992', '1993', '1994', '1995', '1996', '1997', '1998', '1999'], values: [2.18, 3.09, 3.07, 3.03, 3.3, 3.57, 2.5, 3.41, 4.85, 3.7]}},
+                        { title: 'Aumento Esp. de Vida', value: '+5 años', chart: { type: 'bar', label: 'Esperanza de vida (años)', labels: ['1980', '1981', '1982', '1983', '1984', '1985', '1986', '1987', '1988', '1989', '1990', '1991', '1992', '1993', '1994', '1995', '1996', '1997', '1998', '1999'], values: [72.19, 72.59, 72.69, 73.04, 73.29, 73.89, 74.25, 74.55, 74.7, 74.95, 75.3, 75.65, 75.95, 76.05, 76.2, 76.3, 76.6, 76.9, 77.3, 77.55]}},
+                        { title: 'Comercio Sostenido', value: '>300%', chart: { type: 'line', label: 'Comercio (% del PIB)', labels: ['1980', '1981', '1982', '1983', '1984', '1985', '1986', '1987', '1988', '1989', '1990', '1991', '1992', '1993', '1994', '1995', '1996', '1997', '1998', '1999'], values: [410.94, 399.78, 372.54, 333.15, 313.12, 304.14, 294.83, 325.04, 359.87, 347.57, 344.33, 323.89, 311.31, 313.42, 316.22, 345.46, 334.91, 323.86, 312.08, 336.48]}}
+                    ]
+                },
+                peru: {
+                    decade: 'Década de los 90: Reformas y Apertura Económica',
+                    context: 'En 1990, el Perú enfrentaba una crisis terminal: hiperinflación superior al 7,000%, contracción del PIB, pobreza masiva y violencia terrorista. Ante este panorama, el gobierno de Alberto Fujimori implementó un drástico giro hacia el modelo neoliberal, con un programa de shock para estabilizar la economía, abrir los mercados y redefinir el rol del Estado.',
+                    policies: [
+                        { title: 'Estabilización Macroeconómica ("Fujishock")', detail: 'Se eliminó el control de precios y subsidios, se unificó el tipo de cambio y se aplicó un severo ajuste fiscal. El Banco Central de Reserva obtuvo autonomía para ejecutar una política monetaria contractiva y controlar la inflación.' },
+                        { title: 'Liberalización Comercial y Financiera', detail: 'El arancel promedio se redujo de más del 60% a menos del 15% en 1992. Se eliminaron barreras no arancelarias, se desregularon las tasas de interés y se incentivó la entrada de capital extranjero.' },
+                        { title: 'Privatizaciones y Redefinición del Rol del Estado', detail: 'Se ejecutó un amplio proceso de privatizaciones que abarcó más de 200 empresas estatales (electricidad, telecomunicaciones, minería), generando ingresos superiores a 9,000 millones de dólares y orientando al Estado hacia un rol regulador.' }
+                    ],
+                    kpis: [
+                        { title: 'Control de Inflación', value: '7481% → 3.76%', chart: { type: 'line', label: 'Tasa de Inflación Anual (%)', labels: ['1990', '1991', '1992', '1993', '1994', '1995', '1996', '1997', '1998', '1999'], values: [7481.66, 409.53, 73.53, 48.58, 23.74, 11.13, 11.54, 8.56, 7.25, 3.47]}},
+                        { title: 'Recuperación PIB', value: 'Pico 12.31%', chart: { type: 'bar', label: 'Crecimiento del PIB (%)', labels: ['1990', '1991', '1992', '1993', '1994', '1995', '1996', '1997', '1998', '1999'], values: [-4.98, 2.22, -0.54, 5.24, 12.31, 7.41, 2.8, 6.48, -0.39, 1.49]}},
+                        { title: 'Atracción de IED', value: 'Prom. 2.93%', chart: { type: 'bar', label: 'IED Neta (% del PIB)', labels: ['1990', '1991', '1992', '1993', '1994', '1995', '1996', '1997', '1998', '1999'], values: [0.16, -0.02, -0.22, 2.18, 7.33, 4.8, 6.28, 3.68, 2.96, 3.87]}},
+                        { title: 'Reservas Int. Netas', value: '+ $8,000M', chart: { type: 'line', label: 'Reservas Internacionales Netas (Millones USD)', labels: ['1990', '1991', '1992', '1993', '1994', '1995', '1996', '1997', '1998', '1999'], values: [530.9, 1303.5, 2000.6, 2741.5, 5717.51, 6640.68, 8540.37, 10169.07, 9183.45, 8403.63]}}
+                    ]
+                }
+            },
+            '2000s': {
+                singapore: {
+                    decade: '2000-2024: La Economía del Conocimiento y la Innovación',
+                    context: 'Con una base tecnológica sólida, Singapur buscó transformarse en una “economía basada en el conocimiento y la innovación” (KBE). Esta década estuvo marcada por choques externos significativos como la recesión del 2001 (burbuja .com), el brote de SARS en 2003 y la crisis financiera global de 2008, que pusieron a prueba su resiliencia económica.',
+                    policies: [
+                        { title: 'Diversificación Económica y de Valor Agregado', detail: 'El gobierno impulsó industrias de alto valor como la bio-farmacéutica y los servicios financieros, a través de incentivos y un ecosistema favorable para la I+D.' },
+                        { title: 'Política Fiscal Contracíclica', detail: 'Se utilizaron las reservas soberanas para inyectar estímulo económico en crisis. En 2009, el "paquete de resiliencia" de $4,900 millones incluyó subsidios salariales y apoyo a empresas.' },
+                        { title: 'Acuerdos de Libre Comercio (TLCs)', detail: 'Se firmaron múltiples TLCs con socios clave como Estados Unidos (2004), Japón y Australia para asegurar el acceso a mercados y promover la inversión bilateral.' },
+                        { title: 'Atracción de "Talento" Global', detail: 'Se implementaron políticas migratorias flexibles para atraer mano de obra calificada y profesionales, especialmente en finanzas y tecnología, para cubrir la escasez de talento local.' }
+                    ],
+                    kpis: [
+                        { title: 'Resiliencia Crec. PIB', value: 'Prom. 4.8%', chart: { type: 'bar', label: 'Crecimiento PIB (% anual)', labels: ['2000', '2001', '2002', '2003', '2004', '2005', '2006', '2007', '2008', '2009', '2010', '2011', '2012', '2013', '2014', '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024'], values: [9.04, -1.07, 3.92, 4.55, 9.94, 7.37, 9.01, 9.02, 1.86, 0.13, 14.52, 6.21, 4.44, 4.82, 3.94, 2.98, 3.75, 4.48, 3.45, 1.31, -3.81, 9.76, 4.11, 1.82, 4.39]}},
+                        { title: 'IED Neta (% PIB)', value: 'Prom. 21.28%', chart: { type: 'line', label: 'IED Neta (% del PIB)', labels: ['2000', '2001', '2002', '2003', '2004', '2005', '2006', '2007', '2008', '2009', '2010', '2011', '2012', '2013', '2014', '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024'], values: [16.15, 18.94, 6.65, 17.46, 21.2, 15.11, 26.33, 26.16, 7.02, 12.07, 23.07, 17.6, 18.74, 20.93, 21.82, 22.65, 20.38, 29.67, 22.12, 28.33, 22.84, 33.3, 29.41, 26.21, 27.76]}},
+                        { title: 'Comercio Global', value: '~350% del PIB', chart: { type: 'bar', label: 'Comercio (% del PIB)', labels: ['2000', '2001', '2002', '2003', '2004', '2005', '2006', '2007', '2008', '2009', '2010', '2011', '2012', '2013', '2014', '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024'], values: [364.36, 349.29, 349.75, 377.22, 401.52, 420.43, 425.36, 394.29, 437.33, 358.19, 369.69, 379.1, 369.21, 367.04, 360.47, 329.47, 302.84, 316.79, 326.6, 324.39, 332.04, 329.16, 332.35, 325.69, 322.37]}},
+                        { title: 'Inflación Controlada', value: 'Prom. 1.8%', chart: { type: 'line', label: 'Inflación (% anual)', labels: ['2000', '2001', '2002', '2003', '2004', '2005', '2006', '2007', '2008', '2009', '2010', '2011', '2012', '2013', '2014', '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024'], values: [1.36, 1.0, -0.39, 0.51, 1.66, 0.43, 0.97, 2.11, 6.64, 0.59, 2.83, 5.25, 4.58, 2.36, 1.03, -0.52, -0.53, 0.58, 0.44, 0.57, -0.17, 2.32, 6.13, 4.83, 2.39]}}
+                    ]
+                },
+                peru: {
+                    decade: '2000-2024: Del Boom de Commodities a la Desaceleración',
+                    context: 'El siglo XXI inició con un “boom de commodities” que impulsó un crecimiento acelerado. Sin embargo, la caída de precios de minerales desde 2012 evidenció la fragilidad del modelo. Pese a la estabilidad macroeconómica, la inversión se concentró en minería, limitando la transformación productiva. Persistieron debilidades institucionales, conflictos socioambientales y una marcada desigualdad territorial.',
+                    policies: [
+                        { title: 'Mantenimiento de Estabilidad Macroeconómica', detail: 'Se priorizó la disciplina fiscal y monetaria, manteniendo la inflación baja y un tipo de cambio estable para consolidar un entorno seguro para la inversión privada, tanto en la fase del boom como en la de desaceleración.' },
+                        { title: 'Incentivos a la Inversión en Commodities', detail: 'Se otorgaron concesiones y se flexibilizaron normas para atraer capital a la minería y la agroexportación, sectores que dominaron la estructura exportadora (60% en promedio) y la IED.' },
+                        { title: 'Descentralización Fiscal vía Canon Minero', detail: 'Se distribuyeron recursos de la minería a gobiernos regionales para financiar infraestructura. Sin embargo, la desigual capacidad de gestión y la subejecución de fondos limitaron su efectividad y profundizaron brechas territoriales.' },
+                        { title: 'Inversión Pública y Diversificación Limitada', detail: 'Se aumentó la inversión en infraestructura y programas sociales, pero con impacto desigual. Los intentos de diversificar la economía tuvieron resultados modestos ante la persistente dependencia de las materias primas.' }
+                    ],
+                    kpis: [
+                        { title: 'Crecimiento PIB (Prom.)', value: '4.20%', chart: { type: 'line', label: 'Crecimiento del PIB Anual (%)', labels: ['2000', '2001', '2002', '2003', '2004', '2005', '2006', '2007', '2008', '2009', '2010', '2011', '2012', '2013', '2014', '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024'], values: [0.62, 5.45, 4.17, 4.96, 6.29, 7.53, 8.52, 9.13, 1.1, 8.33, 6.33, 6.14, 5.85, 2.38, 3.25, 3.95, 2.52, 3.97, 2.24, -10.93, 13.36, 2.81, -0.4, 3.3]}},
+                        { title: 'Reducción Pobreza', value: '25.5% → 5.9%', chart: { type: 'line', label: 'Tasa de Pobreza (%)', labels: ['2000', '2001', '2002', '2003', '2004', '2005', '2006', '2007', '2008', '2009', '2010', '2011', '2012', '2013', '2014', '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023'], values: [25.5, 27.4, 24.4, 22.5, 23.5, 25.4, 21.8, 18.9, 15.8, 13.7, 11.2, 10.3, 9.5, 8.6, 8.0, 8.0, 7.5, 7.3, 6.1, 5.4, 10.3, 5.2, 4.8, 5.9]}},
+                        { title: 'Estabilidad de Precios', value: 'Prom. 3.1%', chart: { type: 'bar', label: 'Inflación', labels: ['2000', '2001', '2002', '2003', '2004', '2005', '2006', '2007', '2008', '2009', '2010', '2011', '2012', '2013', '2014', '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024'], values: [3.76, 1.98, 0.19, 2.26, 3.66, 1.62, 2.0, 1.78, 5.79, 2.94, 1.53, 3.37, 3.61, 2.77, 3.41, 3.4, 3.56, 2.99, 1.51, 2.25, 2.0, 4.27, 8.33, 6.46, 2.01]}}
+                    ]
+                }
+            }
+        };
+
+        let chartInstances = { singapore: null, peru: null, final: null };
+        const chartColors = {
+            singapore: { bg: 'rgba(56, 189, 248, 0.1)', border: '#38BDF8' },
+            peru: { bg: 'rgba(251, 113, 133, 0.1)', border: '#FB7185' },
+        };
+
+        // --- Configuración Global de Chart.js para Tema Claro ---
+        Chart.defaults.color = '#64748B'; // text-secondary
+        Chart.defaults.borderColor = '#E2E8F0'; // border-color
+
+        const createChart = (ctx, type, labels, values, label, backgroundColor, borderColor) => {
+            return new Chart(ctx, {
+                type: type,
+                data: { labels, datasets: [{ label, data: values, backgroundColor, borderColor, borderWidth: 2, fill: type === 'line', tension: 0.4, pointBackgroundColor: '#FFFFFF', pointBorderColor: borderColor, pointHoverRadius: 7, pointHoverBackgroundColor: borderColor, pointHoverBorderColor: '#FFFFFF' }] },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { 
+                        y: { beginAtZero: false, grid: { color: '#F1F5F9' } }, /* Slate 100 */
+                        x: { grid: { display: false } } 
+                    },
+                    plugins: { 
+                        legend: { labels: { font: { size: 14 } } },
+                        tooltip: {
+                            backgroundColor: '#FFFFFF',
+                            titleColor: '#1E293B',
+                            bodyColor: '#475569',
+                            titleFont: { size: 14, weight: 'bold' },
+                            bodyFont: { size: 12 },
+                            padding: 12,
+                            cornerRadius: 6,
+                            borderColor: borderColor,
+                            borderWidth: 1
+                        }
+                    }
+                }
+            });
+        };
+        
+        const displayKpiChart = (country, decade, kpiIndex) => {
+            const kpiData = data[decade][country].kpis[kpiIndex];
+            const chartData = kpiData.chart;
+            const ctx = document.getElementById(`${country}Chart`).getContext('2d');
+            if (chartInstances[country]) chartInstances[country].destroy();
+            
+            const colors = chartColors[country];
+            chartInstances[country] = createChart(ctx, chartData.type, chartData.labels, chartData.values, chartData.label, colors.bg, colors.border);
+
+            document.querySelectorAll(`#${country}-kpis .kpi-box`).forEach((box, index) => {
+                box.classList.toggle('active-kpi', index === kpiIndex);
+            });
+        };
+
+        const updateView = (decade, isInitialLoad = false) => {
+            const decadeData = data[decade];
+            ['singapore', 'peru'].forEach(country => {
+                const contentContainer = document.getElementById(`content-${country}`);
+                const accentColor = country === 'singapore' ? 'sky' : 'rose';
+                const dynamicHTML = `
+                    <div class="${isInitialLoad ? '' : 'fade-in-content'}">
+                        <h3 class="text-xl font-semibold text-${accentColor}-600 mb-3">${decadeData[country].decade}</h3>
+                        <p class="text-slate-600 mb-5 text-justify">${decadeData[country].context}</p>
+                        
+                        <h4 class="font-semibold mb-3 text-lg text-slate-700">Políticas Clave Detalladas:</h4>
+                        <div class="space-y-1 mb-6 accordion-container">
+                            ${decadeData[country].policies.map(policy => `
+                                <div class="accordion-item">
+                                    <div class="accordion-header">
+                                        <span class="font-semibold text-slate-700">${policy.title}</span>
+                                        <svg class="accordion-icon w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                    </div>
+                                    <div class="accordion-content">
+                                        <p class="text-slate-600 text-sm">${policy.detail}</p>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        
+                        <h4 class="font-semibold mb-3 mt-6 text-slate-700">Indicadores de Impacto (KPIs):</h4>
+                        <div id="${country}-kpis" class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+                            ${decadeData[country].kpis.map((kpi, index) => `
+                                <div class="kpi-box" data-kpi-index="${index}">
+                                    <p class="text-sm text-slate-500 font-medium">${kpi.title}</p>
+                                    <p class="text-xl md:text-2xl font-bold text-${accentColor}-500">${kpi.value}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="relative w-full h-72 md:h-80">
+                            <canvas id="${country}Chart"></canvas>
+                        </div>
+                    </div>
+                `;
+                contentContainer.innerHTML = dynamicHTML;
+                
+                contentContainer.querySelectorAll('.kpi-box').forEach(box => {
+                    box.addEventListener('click', () => displayKpiChart(country, decade, parseInt(box.dataset.kpiIndex)));
+                });
+                
+                setupAccordions(contentContainer);
+                displayKpiChart(country, decade, 0);
+            });
+            
+            document.querySelectorAll('.timeline-btn').forEach(b => b.classList.remove('active'));
+            const activeButton = document.querySelector(`[data-decade="${decade}"]`);
+            activeButton.classList.add('active');
+            updateGlider(activeButton);
+        };
+
+        const initFinalChart = () => {
+            const ctx = document.getElementById('finalComparisonChart').getContext('2d');
+            chartInstances.final = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['1970', '1980', '1990', '2000', '2010', '2020', '2024'],
+                    datasets: [
+                        { label: 'PIB per cápita Singapur (USD)', data: [925.8, 4928.14, 11861.76, 23852.84, 47236.68, 61410.08, 90674.07], borderColor: chartColors.singapore.border, backgroundColor: chartColors.singapore.bg, fill: true, tension: 0.3 },
+                        { label: 'PIB per cápita Perú (USD)', data: [550.48, 1044.69, 1199.67, 1945.41, 5072.11, 6133.33, 8452.37], borderColor: chartColors.peru.border, backgroundColor: chartColors.peru.bg, fill: true, tension: 0.3 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        title: { display: true, text: 'Evolución del PIB per cápita (1970-2024)', font: { size: 18 }, color: '#1E293B' }
+                    },
+                    scales: { y: { grid: { color: '#F1F5F9' } }, x: { grid: { display: false } } }
+                }
+            });
+        };
+
+        const setupAccordions = (container) => {
+            const accordions = container.querySelectorAll('.accordion-header');
+            accordions.forEach(accordion => {
+                accordion.addEventListener('click', () => {
+                    const content = accordion.nextElementSibling;
+                    const wasOpen = content.classList.contains('open');
+                    
+                    container.querySelectorAll('.accordion-content.open').forEach(openContent => {
+                        openContent.classList.remove('open');
+                        openContent.previousElementSibling.classList.remove('active');
+                    });
+
+                    if (!wasOpen) {
+                        accordion.classList.add('active');
+                        content.classList.add('open');
+                    }
+                });
+            });
+        };
+
+        const updateGlider = (activeButton) => {
+            const glider = document.getElementById('nav-glider');
+            if (!activeButton || !glider) return;
+            glider.style.width = `${activeButton.offsetWidth}px`;
+            glider.style.transform = `translateX(${activeButton.offsetLeft}px)`;
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const splashScreen = document.getElementById('splash-screen');
+            const splashContent = splashScreen.querySelector('.splash-content');
+            
+            window.addEventListener('load', () => {
+                splashScreen.classList.remove('opacity-0');
+                splashContent.classList.remove('opacity-0', 'scale-95');
+            });
+            
+            document.getElementById('close-splash').addEventListener('click', () => {
+                splashScreen.classList.add('opacity-0');
+                setTimeout(() => { splashScreen.style.display = 'none'; }, 500); 
+            });
+
+            updateView('70s', true);
+            initFinalChart();
+            
+            document.querySelectorAll('.timeline-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('active')) return;
+                    updateView(e.target.dataset.decade);
+                });
+            });
+            
+            window.addEventListener('resize', () => {
+                const activeButton = document.querySelector('.timeline-btn.active');
+                if (activeButton) {
+                    updateGlider(activeButton);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+
